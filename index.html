@@ -53,6 +53,12 @@
 
   /* ---- hero ---- */
   header{text-align:center;padding:64px 12px 30px}
+  .flags{display:flex;gap:10px;justify-content:center;margin:0 auto 20px}
+  .flag{width:40px;height:28px;padding:0;border:2px solid var(--border);border-radius:6px;
+    background:transparent;cursor:pointer;overflow:hidden;line-height:0;opacity:.45;transition:opacity .15s,border-color .15s,box-shadow .15s}
+  .flag svg{display:block;width:100%;height:100%}
+  .flag:hover{opacity:.85;border-color:var(--border-bright)}
+  .flag[aria-pressed="true"]{opacity:1;border-color:var(--purple-bright);box-shadow:0 0 0 2px rgba(192,132,252,.35) inset,0 0 16px rgba(168,85,247,.25)}
   .eyebrow{
     font-family:"Press Start 2P",monospace;font-size:10px;letter-spacing:1px;
     color:var(--purple-bright);text-transform:uppercase;
@@ -247,9 +253,35 @@
 
 <div class="wrap">
   <header>
-    <span class="eyebrow">Update 1.6 · 807 itens</span>
+    <div class="flags">
+      <button class="flag" id="flagBR" aria-pressed="true" aria-label="Português (Brasil)" title="Português (Brasil)">
+        <svg viewBox="0 0 13 9" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+          <rect width="13" height="9" fill="#009c3b"/>
+          <rect x="6" y="1" width="1" height="1" fill="#ffdf00"/>
+          <rect x="5" y="2" width="3" height="1" fill="#ffdf00"/>
+          <rect x="3" y="3" width="7" height="1" fill="#ffdf00"/>
+          <rect x="1" y="4" width="11" height="1" fill="#ffdf00"/>
+          <rect x="3" y="5" width="7" height="1" fill="#ffdf00"/>
+          <rect x="5" y="6" width="3" height="1" fill="#ffdf00"/>
+          <rect x="6" y="7" width="1" height="1" fill="#ffdf00"/>
+          <rect x="5" y="3" width="3" height="3" fill="#002776"/>
+        </svg>
+      </button>
+      <button class="flag" id="flagUK" aria-pressed="false" aria-label="English" title="English">
+        <svg viewBox="0 0 24 16" xmlns="http://www.w3.org/2000/svg">
+          <rect width="24" height="16" fill="#012169"/>
+          <path d="M0 0L24 16M24 0L0 16" stroke="#fff" stroke-width="3.2"/>
+          <path d="M0 0L24 16M24 0L0 16" stroke="#c8102e" stroke-width="1.4"/>
+          <rect x="9" y="0" width="6" height="16" fill="#fff"/>
+          <rect x="0" y="5" width="24" height="6" fill="#fff"/>
+          <rect x="10.5" y="0" width="3" height="16" fill="#c8102e"/>
+          <rect x="0" y="6.5" width="24" height="3" fill="#c8102e"/>
+        </svg>
+      </button>
+    </div>
+    <span class="eyebrow" id="eyebrow">Update 1.6 · 807 itens</span>
     <h1 class="wordmark">Stardew Valley</h1>
-    <p class="tagline">Conjure qualquer item do nada. Busque pelo nome, escolha a <b>quantidade</b> e a <b>qualidade</b>, e o código já vai pra sua área de transferência.</p>
+    <p class="tagline" id="tagline">Conjure qualquer item do nada. Busque pelo nome, escolha a <b>quantidade</b> e a <b>qualidade</b>, e o código já vai pra sua área de transferência.</p>
   </header>
 
   <div class="toolbar">
@@ -263,7 +295,7 @@
   <p class="count" id="count"></p>
   <div class="grid" id="grid"></div>
 
-  <footer>
+  <footer id="footer">
     Cole o código no <b>nome de um pet/animal</b> (comprado com a Marnie) ou no <b>nome do personagem</b> ao criar a fazenda. O item aparece quando um NPC fala o nome.<br>
     Aceita quantidade até 999 e qualidade · Funciona no PC/Mac/mobile · Use por sua conta e risco.
   </footer>
@@ -282,7 +314,7 @@
     </div>
 
     <div class="field">
-      <p class="label">Quantidade <span style="opacity:.6;font-weight:400">(até 999)</span></p>
+      <p class="label" id="lblQty">Quantidade <span style="opacity:.6;font-weight:400">(até 999)</span></p>
       <div class="stepper">
         <button type="button" id="minus" aria-label="Diminuir">−</button>
         <input id="qty" type="number" min="1" max="999" value="1" aria-label="Quantidade">
@@ -291,12 +323,12 @@
     </div>
 
     <div class="field">
-      <p class="label">Qualidade (estrela)</p>
+      <p class="label" id="lblQual">Qualidade (estrela)</p>
       <div class="quality" id="quality"></div>
     </div>
-    <p class="label" style="opacity:.7;font-weight:400;font-size:12px">Cole no nome de um pet (comprado com a Marnie) ou do personagem. O item aparece quando um NPC fala o nome.</p>
+    <p class="label" id="modalHint" style="opacity:.7;font-weight:400;font-size:12px">Cole no nome de um pet (comprado com a Marnie) ou do personagem. O item aparece quando um NPC fala o nome.</p>
 
-    <p class="label">Código</p>
+    <p class="label" id="lblCode">Código</p>
     <div class="codebox"><code id="codeOut"></code></div>
 
     <button class="generate" id="generate">
@@ -327,6 +359,63 @@ const QUALITIES = [
 const lab = t => LABELS[t] || 'Diversos';
 const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
+/* ===== i18n ===== */
+const CAT_EN = {
+  'Todos':'All','Básicos':'Basics','Sementes':'Seeds','Culinária':'Cooking','Peixes':'Fish',
+  'Minerais':'Minerals','Artefatos':'Artifacts','Fabricação':'Crafting','Anéis':'Rings',
+  'Missões':'Quests','Diversos':'Misc','Detritos':'Litter','Artesanatos Grandes':'Big Craftables',
+  'Móveis':'Furniture','Armas':'Weapons','Ferramentas':'Tools','Botas':'Boots','Chapéus':'Hats',
+  'Camisas':'Shirts','Calças':'Pants','Bugigangas':'Trinkets','Manequins':'Mannequins',
+  'Pisos':'Flooring','Papéis de Parede':'Wallpaper'
+};
+const I18N = {
+  pt:{
+    htmlLang:'pt-BR',
+    title:'Stardew Valley — Gerador de Códigos',
+    eyebrow:'Update 1.6 · 807 itens',
+    tagline:'Conjure qualquer item do nada. Busque pelo nome, escolha a <b>quantidade</b> e a <b>qualidade</b>, e o código já vai pra sua área de transferência.',
+    search:'Buscar item pelo nome…',
+    countOne:n=>n+' item encontrado',
+    countMany:n=>n+' itens encontrados',
+    empty:'Nada por aqui. Tenta outro nome.',
+    qty:'Quantidade <span style="opacity:.6;font-weight:400">(até 999)</span>',
+    qual:'Qualidade (estrela)',
+    code:'Código',
+    modalHint:'Cole no nome de um pet (comprado com a Marnie) ou do personagem. O item aparece quando um NPC fala o nome.',
+    generate:'Gerar e copiar',
+    copied:'Copiado! ✓',
+    copyManual:'Copie manualmente ↑',
+    toastOk:'Código copiado!',
+    toastFail:'Selecione o código acima e copie',
+    qualities:['Normal','Prata','Ouro','Irídio'],
+    footer:'Cole o código no <b>nome de um pet/animal</b> (comprado com a Marnie) ou no <b>nome do personagem</b> ao criar a fazenda. O item aparece quando um NPC fala o nome.<br>Aceita quantidade até 999 e qualidade · Funciona no PC/Mac/mobile · Use por sua conta e risco.'
+  },
+  en:{
+    htmlLang:'en',
+    title:'Stardew Valley — Code Generator',
+    eyebrow:'Update 1.6 · 807 items',
+    tagline:'Conjure any item out of thin air. Search by name, pick the <b>quantity</b> and <b>quality</b>, and the code goes straight to your clipboard.',
+    search:'Search item by name…',
+    countOne:n=>n+' item found',
+    countMany:n=>n+' items found',
+    empty:'Nothing here. Try another name.',
+    qty:'Quantity <span style="opacity:.6;font-weight:400">(up to 999)</span>',
+    qual:'Quality (star)',
+    code:'Code',
+    modalHint:"Paste it into a pet's name (bought from Marnie) or your character's name. The item shows up when an NPC says the name.",
+    generate:'Generate & copy',
+    copied:'Copied! ✓',
+    copyManual:'Copy manually ↑',
+    toastOk:'Code copied!',
+    toastFail:'Select the code above and copy it',
+    qualities:['Normal','Silver','Gold','Iridium'],
+    footer:'Paste the code into a <b>pet/animal name</b> (bought from Marnie) or your <b>character name</b> when creating the farm. The item shows up when an NPC says the name.<br>Supports quantity up to 999 and quality · Works on PC/Mac/mobile · Use at your own risk.'
+  }
+};
+let lang='pt';
+try{const s=localStorage.getItem('sdv_lang'); if(s==='pt'||s==='en') lang=s;}catch(e){}
+const catLabel = c => (lang==='en' && CAT_EN[c]) ? CAT_EN[c] : c;
+
 /* ===== state ===== */
 let activeCat = 'Todos';
 let current = null, curQty = 1, curQual = 0;
@@ -336,14 +425,17 @@ const counts = {};
 ITEMS.forEach(i=>{const l=lab(i.t);counts[l]=(counts[l]||0)+1});
 const cats = ['Todos', ...ORDER.filter(c=>counts[c])];
 const chipsEl = document.getElementById('chips');
-cats.forEach(c=>{
-  const b=document.createElement('button');
-  b.className='chip';b.textContent=c;
-  b.setAttribute('aria-pressed', c==='Todos');
-  if(c!=='Todos'){const s=document.createElement('span');s.className='c';s.textContent=counts[c];b.appendChild(s);}
-  b.onclick=()=>{activeCat=c;[...chipsEl.children].forEach(x=>x.setAttribute('aria-pressed',x===b));render();};
-  chipsEl.appendChild(b);
-});
+function renderChips(){
+  chipsEl.innerHTML='';
+  cats.forEach(c=>{
+    const b=document.createElement('button');
+    b.className='chip';b.textContent=catLabel(c);
+    b.setAttribute('aria-pressed', c===activeCat);
+    if(c!=='Todos'){const s=document.createElement('span');s.className='c';s.textContent=counts[c];b.appendChild(s);}
+    b.onclick=()=>{activeCat=c;[...chipsEl.children].forEach(x=>x.setAttribute('aria-pressed',x===b));render();};
+    chipsEl.appendChild(b);
+  });
+}
 
 /* ===== render grid ===== */
 const grid=document.getElementById('grid'), countEl=document.getElementById('count'), qInput=document.getElementById('q');
@@ -354,8 +446,9 @@ function render(){
     if(term && !norm(i.n).includes(term) && !String(i.id).includes(term)) return false;
     return true;
   });
-  countEl.textContent = list.length + (list.length===1?' item encontrado':' itens encontrados');
-  if(!list.length){ grid.innerHTML='<div class="empty"><span>🔭</span>Nada por aqui. Tenta outro nome.</div>'; return; }
+  const T=I18N[lang];
+  countEl.textContent = list.length===1 ? T.countOne(list.length) : T.countMany(list.length);
+  if(!list.length){ grid.innerHTML='<div class="empty"><span>🔭</span>'+T.empty+'</div>'; return; }
   const frag=document.createDocumentFragment();
   list.forEach(i=>{
     const c=document.createElement('button');
@@ -375,10 +468,10 @@ const mImg=document.getElementById('mImg'), mName=document.getElementById('mName
 const qtyEl=document.getElementById('qty'), codeOut=document.getElementById('codeOut');
 const genBtn=document.getElementById('generate'), genLabel=document.getElementById('genLabel');
 
-QUALITIES.forEach(q=>{
+QUALITIES.forEach((q,i)=>{
   const b=document.createElement('button');b.className='q';b.type='button';
   b.setAttribute('aria-pressed', q.v===0);
-  b.innerHTML=`<span class="star" style="color:${q.color}">${q.star}</span><span class="qn">${q.label}</span>`;
+  b.innerHTML=`<span class="star" style="color:${q.color}">${q.star}</span><span class="qn">${I18N[lang].qualities[i]}</span>`;
   b.onclick=()=>{curQual=q.v;[...qualityEl.children].forEach(x=>x.setAttribute('aria-pressed',x===b));updateCode();};
   qualityEl.appendChild(b);
 });
@@ -416,7 +509,7 @@ function buildCode(){
   return PRE+suffix;
 }
 function updateCode(){codeOut.textContent=buildCode();resetBtn()}
-function resetBtn(){genBtn.classList.remove('done');genLabel.textContent='Gerar e copiar'}
+function resetBtn(){genBtn.classList.remove('done');genLabel.textContent=I18N[lang].generate}
 
 async function copyText(txt){
   try{await navigator.clipboard.writeText(txt);return true}
@@ -427,17 +520,42 @@ async function copyText(txt){
   }
 }
 genBtn.onclick=async()=>{
-  const code=buildCode();const ok=await copyText(code);
+  const code=buildCode();const ok=await copyText(code);const T=I18N[lang];
   genBtn.classList.add('done');
-  genLabel.textContent=ok?'Copiado! ✓':'Copie manualmente ↑';
-  toast(ok?'Código copiado!':'Selecione o código acima e copie');
+  genLabel.textContent=ok?T.copied:T.copyManual;
+  toast(ok?T.toastOk:T.toastFail);
 };
 
 /* ===== toast ===== */
 const toastEl=document.getElementById('toast'), toastMsg=document.getElementById('toastMsg');
 let tt;function toast(msg){toastMsg.textContent=msg;toastEl.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>toastEl.classList.remove('show'),2200)}
 
-render();
+/* ===== i18n apply ===== */
+function applyLang(l){
+  lang=l; const T=I18N[l];
+  document.documentElement.lang=T.htmlLang;
+  document.title=T.title;
+  document.getElementById('eyebrow').textContent=T.eyebrow;
+  document.getElementById('tagline').innerHTML=T.tagline;
+  qInput.placeholder=T.search;
+  document.getElementById('lblQty').innerHTML=T.qty;
+  document.getElementById('lblQual').textContent=T.qual;
+  document.getElementById('lblCode').textContent=T.code;
+  document.getElementById('modalHint').innerHTML=T.modalHint;
+  document.getElementById('footer').innerHTML=T.footer;
+  [...qualityEl.children].forEach((b,i)=>{const qn=b.querySelector('.qn'); if(qn) qn.textContent=T.qualities[i];});
+  genLabel.textContent=T.generate;
+  document.getElementById('flagBR').setAttribute('aria-pressed', l==='pt');
+  document.getElementById('flagUK').setAttribute('aria-pressed', l==='en');
+  renderChips();
+  render();
+  if(current){resetBtn();updateCode();}
+  try{localStorage.setItem('sdv_lang',l);}catch(e){}
+}
+document.getElementById('flagBR').onclick=()=>applyLang('pt');
+document.getElementById('flagUK').onclick=()=>applyLang('en');
+
+applyLang(lang);
 
 /* ===== animated starfield ===== */
 (function(){
