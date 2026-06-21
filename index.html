@@ -264,8 +264,8 @@
   <div class="grid" id="grid"></div>
 
   <footer>
-    Dois métodos: <b>Truque do nome</b> (colchetes, máx. 3, funciona em qualquer plataforma) ou <b>Comando de chat</b> <code>/debug item</code> (quantidade até 999 + qualidade, precisa ativar cheats no save, só PC).<br>
-    Escolha o método dentro de cada item · Use por sua conta e risco.
+    Cole o código no <b>nome de um pet/animal</b> (comprado com a Marnie) ou no <b>nome do personagem</b> ao criar a fazenda. O item aparece quando um NPC fala o nome.<br>
+    Aceita quantidade até 999 e qualidade · Funciona no PC/Mac/mobile · Use por sua conta e risco.
   </footer>
 </div>
 
@@ -282,27 +282,19 @@
     </div>
 
     <div class="field">
-      <p class="label">Método</p>
-      <div class="quality" id="method" style="grid-template-columns:repeat(2,1fr)">
-        <button type="button" class="q" id="mtName" aria-pressed="true"><span class="qn">Truque do nome</span></button>
-        <button type="button" class="q" id="mtChat" aria-pressed="false"><span class="qn">Comando de chat</span></button>
-      </div>
-    </div>
-
-    <div class="field">
-      <p class="label">Quantidade <span id="qtyHint" style="opacity:.6;font-weight:400">(máx. 3 por nome)</span></p>
+      <p class="label">Quantidade <span style="opacity:.6;font-weight:400">(até 999)</span></p>
       <div class="stepper">
         <button type="button" id="minus" aria-label="Diminuir">−</button>
-        <input id="qty" type="number" min="1" max="3" value="1" aria-label="Quantidade">
+        <input id="qty" type="number" min="1" max="999" value="1" aria-label="Quantidade">
         <button type="button" id="plus" aria-label="Aumentar">+</button>
       </div>
     </div>
 
-    <div class="field" id="qualityField" style="display:none">
+    <div class="field">
       <p class="label">Qualidade (estrela)</p>
       <div class="quality" id="quality"></div>
     </div>
-    <p class="label" id="methodHint" style="opacity:.7;font-weight:400;font-size:12px">Sempre qualidade Normal. Cole no nome de um pet (Marnie) ou do personagem.</p>
+    <p class="label" style="opacity:.7;font-weight:400;font-size:12px">Cole no nome de um pet (comprado com a Marnie) ou do personagem. O item aparece quando um NPC fala o nome.</p>
 
     <p class="label">Código</p>
     <div class="codebox"><code id="codeOut"></code></div>
@@ -337,7 +329,7 @@ const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''
 
 /* ===== state ===== */
 let activeCat = 'Todos';
-let current = null, curQty = 1, curQual = 0, mode = 'name';
+let current = null, curQty = 1, curQual = 0;
 
 /* ===== build chips ===== */
 const counts = {};
@@ -391,31 +383,13 @@ QUALITIES.forEach(q=>{
   qualityEl.appendChild(b);
 });
 
-function qtyMax(){ return mode==='chat' ? 999 : 3; }
-function applyMode(){
-  const isChat = mode==='chat';
-  document.getElementById('mtName').setAttribute('aria-pressed', !isChat);
-  document.getElementById('mtChat').setAttribute('aria-pressed', isChat);
-  document.getElementById('qualityField').style.display = isChat ? '' : 'none';
-  document.getElementById('qtyHint').textContent = isChat ? '(até 999)' : '(máx. 3 por nome)';
-  document.getElementById('methodHint').innerHTML = isChat
-    ? 'Requer ativar <b>allowChatCheats</b> no save (PC). No jogo, aperte <b>T</b> e cole o comando.'
-    : 'Sempre qualidade Normal. Cole no nome de um pet (Marnie) ou do personagem.';
-  qtyEl.max = qtyMax();
-  curQty = Math.min(Math.max(curQty,1), qtyMax());
-  qtyEl.value = curQty;
-  updateCode();
-}
-document.getElementById('mtName').onclick=()=>{mode='name';applyMode();};
-document.getElementById('mtChat').onclick=()=>{mode='chat';applyMode();};
-
 function openModal(item){
   current=item;curQty=1;curQual=0;
   mImg.src='data:image/png;base64,'+item.img;mImg.alt=item.n;
   mName.textContent=item.n;mId.textContent='ID '+item.id;
   qtyEl.value=1;
   [...qualityEl.children].forEach((x,idx)=>x.setAttribute('aria-pressed',idx===0));
-  resetBtn();applyMode();
+  resetBtn();updateCode();
   overlay.classList.add('open');
   document.body.style.overflow='hidden';
 }
@@ -425,27 +399,21 @@ overlay.onclick=e=>{if(e.target===overlay)closeModal()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))closeModal()});
 
 document.getElementById('minus').onclick=()=>{curQty=Math.max(1,(parseInt(qtyEl.value)||1)-1);qtyEl.value=curQty;updateCode()};
-document.getElementById('plus').onclick=()=>{curQty=Math.min(qtyMax(),(parseInt(qtyEl.value)||1)+1);qtyEl.value=curQty;updateCode()};
-qtyEl.addEventListener('input',()=>{let v=parseInt(qtyEl.value)||1;curQty=Math.min(qtyMax(),Math.max(1,v));updateCode()});
+document.getElementById('plus').onclick=()=>{curQty=Math.min(999,(parseInt(qtyEl.value)||1)+1);qtyEl.value=curQty;updateCode()};
+qtyEl.addEventListener('input',()=>{let v=parseInt(qtyEl.value)||1;curQty=Math.min(999,Math.max(1,v));updateCode()});
 qtyEl.addEventListener('blur',()=>{qtyEl.value=curQty});
 
 function buildCode(){
-  const id=String(current.id);
-  if(mode==='chat'){
-    const qty=Math.min(Math.max(curQty,1),999);
-    return `/debug item ${id} ${qty} ${curQual}`;
+  const SEP='${^^\n}$';                       /* token de gênero: some na tela, só serve p/ caber no nome */
+  const PRE='#$actio'+SEP+'n Add'+SEP+'Item '+SEP;  /* = "#$action AddItem " quebrado p/ caber na caixa */
+  const qty=Math.min(Math.max(curQty,1),999);
+  let suffix=current.id+' '+qty+' '+curQual;        /* ex.: "382 999 0" */
+  if(suffix.length>9){                              /* IDs longos (móveis etc.): quebra a cada 7 p/ caber */
+    let parts=[];
+    for(let i=0;i<suffix.length;i+=7) parts.push(suffix.slice(i,i+7));
+    suffix=parts.join(SEP);
   }
-  const SEP='${^^\n}$';                 /* comando de diálogo (1.6): some na tela + quebra a linha */
-  let wrapped=id;
-  if(id.length>7){                       /* só quebra IDs longos pra caber na caixa de nome */
-    wrapped='';
-    for(let i=0;i<id.length;i+=5){
-      wrapped+=id.slice(i,i+5);
-      if(i+5<id.length) wrapped+=SEP;
-    }
-  }
-  const reps=Math.min(Math.max(curQty,1),3);  /* até 3 itens por nome */
-  return ('['+wrapped+']').repeat(reps);
+  return PRE+suffix;
 }
 function updateCode(){codeOut.textContent=buildCode();resetBtn()}
 function resetBtn(){genBtn.classList.remove('done');genLabel.textContent='Gerar e copiar'}
