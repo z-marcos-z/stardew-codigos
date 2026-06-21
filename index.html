@@ -264,8 +264,8 @@
   <div class="grid" id="grid"></div>
 
   <footer>
-    Cole o código no jogo renomeando seu personagem (estátua do Mago) ou via diálogo.<br>
-    Formato gerado: <code>#$action AddItem [id] [qtd] [qualidade]</code> · Use por sua conta e risco.
+    Cole o código no <b>nome de um pet/animal</b> (comprado com a Marnie) ou no <b>nome do seu personagem</b> ao criar a fazenda. Quando um NPC falar o nome, o item aparece no inventário.<br>
+    Formato gerado: <code>[ID]</code> (o "truque do nome" do 1.6) · Use por sua conta e risco.
   </footer>
 </div>
 
@@ -282,18 +282,19 @@
     </div>
 
     <div class="field">
-      <p class="label">Quantidade</p>
+      <p class="label">Quantidade <span style="opacity:.6;font-weight:400">(máx. 3 por nome)</span></p>
       <div class="stepper">
         <button type="button" id="minus" aria-label="Diminuir">−</button>
-        <input id="qty" type="number" min="1" max="999" value="1" aria-label="Quantidade">
+        <input id="qty" type="number" min="1" max="3" value="1" aria-label="Quantidade">
         <button type="button" id="plus" aria-label="Aumentar">+</button>
       </div>
     </div>
 
-    <div class="field">
+    <div class="field" style="display:none">
       <p class="label">Qualidade (estrela)</p>
       <div class="quality" id="quality"></div>
     </div>
+    <p class="label" style="opacity:.7;font-weight:400;font-size:12px">O truque do nome sempre entrega o item em qualidade Normal.</p>
 
     <p class="label">Código</p>
     <div class="codebox"><code id="codeOut"></code></div>
@@ -398,11 +399,24 @@ overlay.onclick=e=>{if(e.target===overlay)closeModal()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))closeModal()});
 
 document.getElementById('minus').onclick=()=>{curQty=Math.max(1,(parseInt(qtyEl.value)||1)-1);qtyEl.value=curQty;updateCode()};
-document.getElementById('plus').onclick=()=>{curQty=Math.min(999,(parseInt(qtyEl.value)||1)+1);qtyEl.value=curQty;updateCode()};
-qtyEl.addEventListener('input',()=>{let v=parseInt(qtyEl.value)||1;curQty=Math.min(999,Math.max(1,v));updateCode()});
+document.getElementById('plus').onclick=()=>{curQty=Math.min(3,(parseInt(qtyEl.value)||1)+1);qtyEl.value=curQty;updateCode()};
+qtyEl.addEventListener('input',()=>{let v=parseInt(qtyEl.value)||1;curQty=Math.min(3,Math.max(1,v));updateCode()});
 qtyEl.addEventListener('blur',()=>{qtyEl.value=curQty});
 
-function buildCode(){return `#$action AddItem ${current.id} ${curQty} ${curQual}`}
+function buildCode(){
+  const SEP='${^^\n}$';                 /* comando de diálogo (1.6): some na tela + quebra a linha */
+  const id=String(current.id);
+  let wrapped=id;
+  if(id.length>7){                       /* só quebra IDs longos pra caber na caixa de nome */
+    wrapped='';
+    for(let i=0;i<id.length;i+=5){
+      wrapped+=id.slice(i,i+5);
+      if(i+5<id.length) wrapped+=SEP;
+    }
+  }
+  const reps=Math.min(Math.max(curQty,1),3);  /* até 3 itens por nome */
+  return ('['+wrapped+']').repeat(reps);
+}
 function updateCode(){codeOut.textContent=buildCode();resetBtn()}
 function resetBtn(){genBtn.classList.remove('done');genLabel.textContent='Gerar e copiar'}
 
