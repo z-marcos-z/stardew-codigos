@@ -264,8 +264,8 @@
   <div class="grid" id="grid"></div>
 
   <footer>
-    Cole o código no <b>nome de um pet/animal</b> (comprado com a Marnie) ou no <b>nome do seu personagem</b> ao criar a fazenda. Quando um NPC falar o nome, o item aparece no inventário.<br>
-    Formato gerado: <code>[ID]</code> (o "truque do nome" do 1.6) · Use por sua conta e risco.
+    Dois métodos: <b>Truque do nome</b> (colchetes, máx. 3, funciona em qualquer plataforma) ou <b>Comando de chat</b> <code>/debug item</code> (quantidade até 999 + qualidade, precisa ativar cheats no save, só PC).<br>
+    Escolha o método dentro de cada item · Use por sua conta e risco.
   </footer>
 </div>
 
@@ -282,7 +282,15 @@
     </div>
 
     <div class="field">
-      <p class="label">Quantidade <span style="opacity:.6;font-weight:400">(máx. 3 por nome)</span></p>
+      <p class="label">Método</p>
+      <div class="quality" id="method" style="grid-template-columns:repeat(2,1fr)">
+        <button type="button" class="q" id="mtName" aria-pressed="true"><span class="qn">Truque do nome</span></button>
+        <button type="button" class="q" id="mtChat" aria-pressed="false"><span class="qn">Comando de chat</span></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <p class="label">Quantidade <span id="qtyHint" style="opacity:.6;font-weight:400">(máx. 3 por nome)</span></p>
       <div class="stepper">
         <button type="button" id="minus" aria-label="Diminuir">−</button>
         <input id="qty" type="number" min="1" max="3" value="1" aria-label="Quantidade">
@@ -290,11 +298,11 @@
       </div>
     </div>
 
-    <div class="field" style="display:none">
+    <div class="field" id="qualityField" style="display:none">
       <p class="label">Qualidade (estrela)</p>
       <div class="quality" id="quality"></div>
     </div>
-    <p class="label" style="opacity:.7;font-weight:400;font-size:12px">O truque do nome sempre entrega o item em qualidade Normal.</p>
+    <p class="label" id="methodHint" style="opacity:.7;font-weight:400;font-size:12px">Sempre qualidade Normal. Cole no nome de um pet (Marnie) ou do personagem.</p>
 
     <p class="label">Código</p>
     <div class="codebox"><code id="codeOut"></code></div>
@@ -329,7 +337,7 @@ const norm = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''
 
 /* ===== state ===== */
 let activeCat = 'Todos';
-let current = null, curQty = 1, curQual = 0;
+let current = null, curQty = 1, curQual = 0, mode = 'name';
 
 /* ===== build chips ===== */
 const counts = {};
@@ -383,13 +391,31 @@ QUALITIES.forEach(q=>{
   qualityEl.appendChild(b);
 });
 
+function qtyMax(){ return mode==='chat' ? 999 : 3; }
+function applyMode(){
+  const isChat = mode==='chat';
+  document.getElementById('mtName').setAttribute('aria-pressed', !isChat);
+  document.getElementById('mtChat').setAttribute('aria-pressed', isChat);
+  document.getElementById('qualityField').style.display = isChat ? '' : 'none';
+  document.getElementById('qtyHint').textContent = isChat ? '(até 999)' : '(máx. 3 por nome)';
+  document.getElementById('methodHint').innerHTML = isChat
+    ? 'Requer ativar <b>allowChatCheats</b> no save (PC). No jogo, aperte <b>T</b> e cole o comando.'
+    : 'Sempre qualidade Normal. Cole no nome de um pet (Marnie) ou do personagem.';
+  qtyEl.max = qtyMax();
+  curQty = Math.min(Math.max(curQty,1), qtyMax());
+  qtyEl.value = curQty;
+  updateCode();
+}
+document.getElementById('mtName').onclick=()=>{mode='name';applyMode();};
+document.getElementById('mtChat').onclick=()=>{mode='chat';applyMode();};
+
 function openModal(item){
   current=item;curQty=1;curQual=0;
   mImg.src='data:image/png;base64,'+item.img;mImg.alt=item.n;
   mName.textContent=item.n;mId.textContent='ID '+item.id;
   qtyEl.value=1;
   [...qualityEl.children].forEach((x,idx)=>x.setAttribute('aria-pressed',idx===0));
-  resetBtn();updateCode();
+  resetBtn();applyMode();
   overlay.classList.add('open');
   document.body.style.overflow='hidden';
 }
@@ -399,13 +425,17 @@ overlay.onclick=e=>{if(e.target===overlay)closeModal()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&overlay.classList.contains('open'))closeModal()});
 
 document.getElementById('minus').onclick=()=>{curQty=Math.max(1,(parseInt(qtyEl.value)||1)-1);qtyEl.value=curQty;updateCode()};
-document.getElementById('plus').onclick=()=>{curQty=Math.min(3,(parseInt(qtyEl.value)||1)+1);qtyEl.value=curQty;updateCode()};
-qtyEl.addEventListener('input',()=>{let v=parseInt(qtyEl.value)||1;curQty=Math.min(3,Math.max(1,v));updateCode()});
+document.getElementById('plus').onclick=()=>{curQty=Math.min(qtyMax(),(parseInt(qtyEl.value)||1)+1);qtyEl.value=curQty;updateCode()};
+qtyEl.addEventListener('input',()=>{let v=parseInt(qtyEl.value)||1;curQty=Math.min(qtyMax(),Math.max(1,v));updateCode()});
 qtyEl.addEventListener('blur',()=>{qtyEl.value=curQty});
 
 function buildCode(){
-  const SEP='${^^\n}$';                 /* comando de diálogo (1.6): some na tela + quebra a linha */
   const id=String(current.id);
+  if(mode==='chat'){
+    const qty=Math.min(Math.max(curQty,1),999);
+    return `/debug item ${id} ${qty} ${curQual}`;
+  }
+  const SEP='${^^\n}$';                 /* comando de diálogo (1.6): some na tela + quebra a linha */
   let wrapped=id;
   if(id.length>7){                       /* só quebra IDs longos pra caber na caixa de nome */
     wrapped='';
