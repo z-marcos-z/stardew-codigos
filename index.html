@@ -504,17 +504,25 @@ document.getElementById('plus').onclick=()=>{curQty=Math.min(999,(parseInt(qtyEl
 qtyEl.addEventListener('input',()=>{let v=parseInt(qtyEl.value)||1;curQty=Math.min(999,Math.max(1,v));updateCode()});
 qtyEl.addEventListener('blur',()=>{qtyEl.value=curQty});
 
-function buildCode(){
-  const SEP='${^^\n}$';                       /* token de gênero: some na tela, só serve p/ caber no nome */
-  const PRE='#$actio'+SEP+'n Add'+SEP+'Item '+SEP;  /* = "#$action AddItem " quebrado p/ caber na caixa */
-  const qty=Math.min(Math.max(curQty,1),999);
-  let suffix=current.id+' '+qty+' '+curQual;        /* ex.: "382 999 0" */
-  if(suffix.length>9){                              /* IDs longos (móveis etc.): quebra a cada 7 p/ caber */
-    let parts=[];
-    for(let i=0;i<suffix.length;i+=7) parts.push(suffix.slice(i,i+7));
-    suffix=parts.join(SEP);
+/* ===== quebra por largura real da caixa de nome (algoritmo do MateusAquino/stardewids) ===== */
+const SDV_CP={32:15,33:9,34:15,35:27,36:30,37:33,38:27,39:9,40:15,41:15,42:24,43:27,44:12,45:18,46:9,47:21,48:21,49:24,50:21,51:24,52:18,53:21,54:24,55:21,56:21,57:21,58:9,59:12,60:27,61:33,62:24,63:24,64:24,65:21,66:27,67:27,68:27,69:27,70:24,71:30,72:27,73:9,74:18,75:24,76:24,77:33,78:27,79:30,80:27,81:30,82:27,83:27,84:27,85:27,86:27,87:39,88:27,89:27,90:27,91:12,92:21,93:12,94:21,95:27,96:12,97:24,98:21,99:21,100:24,101:21,102:18,103:21,104:21,105:9,106:15,107:18,108:12,109:33,110:21,111:21,112:21,113:24,114:21,115:21,116:18,117:24,118:21,119:27,120:21,121:21,122:21,123:21,124:9,125:21,126:24};
+const SDV_SPACING=2, SDV_LIMIT=233;
+function sdvWidth(str){let t=0;for(let i=0;i<str.length;i++){const c=SDV_CP[str.codePointAt(i)];t+=(c===undefined?21:c)-SDV_SPACING;}return t;}
+const SDV_LBS=sdvWidth('${^^');
+function sdvSplit(str,parsed=''){
+  const lines=str.split('\n');
+  if(lines.length>1) return lines.map(l=>sdvSplit(l)).join('\n');
+  if(sdvWidth(str)<=SDV_LIMIT) return parsed+str;
+  for(let i=0;i<str.length;i++){
+    if(sdvWidth(str.substr(0,i))+SDV_LBS>SDV_LIMIT){
+      return sdvSplit('}$'+str.substr(i-1), parsed+str.substr(0,i-1)+'${^^\n');
+    }
   }
-  return PRE+suffix;
+  return parsed+str;
+}
+function buildCode(){
+  const qty=Math.min(Math.max(curQty,1),999);
+  return sdvSplit('#$action AddItem '+current.id+' '+qty+' '+curQual);
 }
 function updateCode(){codeOut.textContent=buildCode();resetBtn()}
 function resetBtn(){genBtn.classList.remove('done');genLabel.textContent=I18N[lang].generate}
